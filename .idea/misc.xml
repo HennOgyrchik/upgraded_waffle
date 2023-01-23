@@ -4,7 +4,23 @@
     <option name="openedFilesInfos">
       <list>
         <OpenedFileInfo>
-          <option name="caretOffset" value="2868" />
+          <option name="caretOffset" value="169" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/Dockerfile" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="321" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/postgres/struct_db.sql" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="343" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/docker-compose.yml" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="337" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/postgres/postgres.go" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="2928" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/main/main.go" />
         </OpenedFileInfo>
       </list>

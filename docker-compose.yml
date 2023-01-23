@@ -1,0 +1,19 @@
+version: "3"
+services:
+  postgres:
+    image: "postgres"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: waffel
+    volumes:
+      - postgres:/var/lib/postgresql/data
+  upgraded-waffel:
+    build:
+      context: ./
+    image: "waffel:1.0"
+    ports:
+      - "4545:4545"
+    depends_on:
+      - postgres
+volumes:
+  postgres:

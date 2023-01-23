@@ -52,8 +52,6 @@ func (u *user) write(s string) {
 }
 
 func welcome(conn net.Conn, usrList map[string]user) {
-	defer fmt.Println("[Welcome ", conn.RemoteAddr().String(), " exit]")
-
 	usr := user{conn: conn, ip: conn.RemoteAddr().String(), userList: usrList}
 
 	for b := true; b; {
@@ -90,14 +88,16 @@ func welcome(conn net.Conn, usrList map[string]user) {
 	}
 
 	err := usr.listener()
+	usr.Lock()
+	delete(usr.userList, usr.login)
+	usr.Unlock()
 	if err != nil {
 		return
 	}
-
 }
 
 func (u *user) authorization() error {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		u.write("Введите логин: ")
 		login, err := u.read()
 		if err != nil {
@@ -117,7 +117,12 @@ func (u *user) authorization() error {
 			u.write("Неверный логин или пароль!\n")
 			continue
 		}
-		
+		_, ok = u.userList[login]
+		if ok {
+			u.write("Эта учетная запись уже используется!\n")
+			continue
+		}
+
 		u.write("Авторизация прошла успешно!\n")
 		u.login = login
 		err = postgres.WriteMessage("server", u.login+" присоединился к чату!")
@@ -143,7 +148,7 @@ func (u *user) registration() error {
 		}
 
 		ok, err := postgres.CheckLogin(login)
-
+		fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!", err)
 		if err != nil {
 			return err
 		}
@@ -177,17 +182,14 @@ func (u *user) registration() error {
 	return nil
 }
 
-func (u user) listener( /*ctx context.Context*/) error {
+func (u user) listener() error {
 	for {
 		mes, err := u.read()
 		if err != nil {
-			//ctx.Done()
-			fmt.Println("[!] ", err)
 			return err
 		}
 		err = postgres.WriteMessage(u.login, mes)
 		if err != nil {
-			fmt.Println("[LISTENER]:", err)
 			return err
 		}
 		u.mailing()
@@ -197,7 +199,6 @@ func (u user) listener( /*ctx context.Context*/) error {
 func (u user) sender() {
 	mes, err := postgres.GetLastMessage()
 	if err != nil {
-		fmt.Println("[SENDER]:", err) //надо подумать обрабатывать ли ошибки здесь
 	}
 	u.write(mes)
 }
