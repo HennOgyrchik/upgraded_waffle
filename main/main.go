@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"net"
+	"regexp"
+	"sort"
+	"strings"
 	"sync"
 	"upgraded_waffle/postgres"
 )
@@ -14,6 +17,14 @@ type user struct {
 	sync.Mutex
 	userList map[string]user
 }
+
+type commands struct {
+	name        string
+	matchString string
+	about       string
+}
+
+type commandListType map[commands]func(*user, commandListType)
 
 func main() {
 	listener, err := net.Listen("tcp", ":4545")
@@ -44,7 +55,54 @@ func (u *user) read() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(buff[0:n]), nil
+
+	return string(buff[0:n]), err
+}
+
+func commandListHandler(s string, u *user) bool {
+	commandList := map[commands]func(*user, commandListType){
+		commands{name: "/help", matchString: "^/help$", about: "\tСписок команд"}:                          help,
+		commands{name: "/users", matchString: "^/users$", about: "\tПросмотр списка пользователей онлайн"}: usersList,
+		commands{name: "/joke", matchString: "^/joke$", about: "\tШутка"}:                                  joke,
+	}
+	//x := whisperMessage
+
+	for i, v := range commandList {
+		matched, err := regexp.MatchString(i.matchString, s)
+		if err != nil {
+			return true
+		}
+		if matched {
+			v(u, commandList)
+			return false
+		}
+	}
+	return true
+}
+
+func help(u *user, commandList commandListType) {
+
+	cmdList := make([]string, 0)
+	for i, _ := range commandList {
+		cmdList = append(cmdList, fmt.Sprint(i.name+i.about))
+	}
+	sort.Strings(cmdList)
+
+	u.write("Список команд:\n" + strings.Join(cmdList, "\n") + "\n")
+
+}
+func usersList(u *user, _ commandListType) {
+	userList := make([]string, 0)
+	for i, _ := range u.userList {
+		userList = append(userList, i)
+	}
+	sort.Strings(userList)
+	u.write("Список пользователей:\n" + strings.Join(userList, "\n") + "\n")
+
+}
+
+func joke(u *user, _ commandListType) {
+	u.write("Я тебе шутка что-ли?!\n")
 }
 
 func (u *user) write(s string) {
@@ -123,7 +181,7 @@ func (u *user) authorization() error {
 			continue
 		}
 
-		u.write("Авторизация прошла успешно!\n")
+		u.write("Авторизация прошла успешно!\nДля вывода списка команд напишите: /help\n")
 		u.login = login
 		err = postgres.WriteMessage("server", u.login+" присоединился к чату!")
 		if err != nil {
@@ -148,7 +206,6 @@ func (u *user) registration() error {
 		}
 
 		ok, err := postgres.CheckLogin(login)
-		fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!", err)
 		if err != nil {
 			return err
 		}
@@ -182,12 +239,26 @@ func (u *user) registration() error {
 	return nil
 }
 
-func (u user) listener() error {
+func (u *user) listener() error {
+	defer func() {
+		err := postgres.WriteMessage("server", u.login+" покинул чат!")
+		if err != nil {
+			return
+		}
+		u.mailing()
+	}()
+
 	for {
 		mes, err := u.read()
 		if err != nil {
 			return err
 		}
+
+		ok := commandListHandler(mes, u)
+		if !ok {
+			continue
+		}
+
 		err = postgres.WriteMessage(u.login, mes)
 		if err != nil {
 			return err
@@ -196,14 +267,14 @@ func (u user) listener() error {
 	}
 }
 
-func (u user) sender() {
+func (u *user) sender() {
 	mes, err := postgres.GetLastMessage()
 	if err != nil {
 	}
 	u.write(mes)
 }
 
-func (u user) mailing() {
+func (u *user) mailing() {
 	for i, v := range u.userList {
 		if i != u.login {
 			v.sender()

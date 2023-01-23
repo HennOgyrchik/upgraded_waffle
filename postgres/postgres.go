@@ -11,7 +11,6 @@ func dbConnection() (*sql.DB, error) {
 	db, err := sql.Open("postgres", connStr)
 
 	if err != nil {
-		fmt.Printf("Ошибка подключения к БД:%s\n", err)
 		db.Close()
 	}
 
@@ -72,7 +71,6 @@ func CheckLogin(login string) (bool, error) { //возвращает true, ес�
 
 	stmt, err := db.Prepare("select count(login) from users where login=$1")
 	if err != nil {
-		fmt.Println("!!!!!!!!!!!!1", err)
 		return false, err
 	}
 	var temp int
